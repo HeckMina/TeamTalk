@@ -1,16 +1,23 @@
 package com.mogujie.tt.imservice.service;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
+import android.support.annotation.RequiresApi;
+import android.support.v4.app.NotificationCompat;
 
 import com.mogujie.tt.DB.DBInterface;
 import com.mogujie.tt.DB.entity.MessageEntity;
 import com.mogujie.tt.DB.sp.ConfigurationSp;
 import com.mogujie.tt.DB.sp.LoginSp;
+import com.mogujie.tt.R;
 import com.mogujie.tt.config.SysConstant;
 import com.mogujie.tt.imservice.event.LoginEvent;
 import com.mogujie.tt.imservice.event.PriorityEvent;
@@ -76,9 +83,32 @@ public class IMService extends Service {
 		// make the service foreground, so stop "360 yi jian qingli"(a clean
 		// tool) to stop our app
 		// todo eric study wechat's mechanism, use a better solution
-		startForeground((int) System.currentTimeMillis(), new Notification());
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+			startMyOwnForeground();
+		else
+			startForeground((int) System.currentTimeMillis(), new Notification());
 	}
 
+	@RequiresApi(api = Build.VERSION_CODES.O)
+	private void startMyOwnForeground(){
+		String NOTIFICATION_CHANNEL_ID = "com.example.simpleapp";
+		String channelName = "My Background Service";
+		NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
+		chan.setLightColor(Color.BLUE);
+		chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+		NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+		assert manager != null;
+		manager.createNotificationChannel(chan);
+
+		NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
+		Notification notification = notificationBuilder.setOngoing(true)
+			.setSmallIcon(R.drawable.tt_small_icon)
+			.setContentTitle("App is running in background")
+			.setPriority(NotificationManager.IMPORTANCE_MIN)
+			.setCategory(Notification.CATEGORY_SERVICE)
+			.build();
+		startForeground(2, notification);
+	}
 	@Override
 	public void onDestroy() {
 		logger.i("IMService onDestroy");
